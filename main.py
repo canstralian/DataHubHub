@@ -1,447 +1,483 @@
 import streamlit as st
+import os
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import os
 import json
-from datetime import datetime
-from components.dataset_uploader import render_dataset_uploader
-from components.dataset_preview import render_dataset_preview
-from components.dataset_statistics import render_dataset_statistics
-from components.dataset_validation import render_dataset_validation
-from components.dataset_visualization import render_dataset_visualization
-from components.fine_tuning.finetune_ui import render_finetune_ui
-from components.code_quality import render_code_quality_tools
-from utils.huggingface_integration import search_huggingface_datasets, load_huggingface_dataset
-from utils.dataset_utils import get_dataset_info, detect_dataset_format
-from utils.smolagents_integration import process_with_smolagents
-from database import (
-    DatasetOperations,
-    TrainingOperations,
-    CodeQualityOperations
-)
+from pathlib import Path
 
-# Set page configuration
+# Make sure necessary directories exist
+os.makedirs('assets', exist_ok=True)
+os.makedirs('database/data', exist_ok=True)
+os.makedirs('fine_tuned_models', exist_ok=True)
+
+# Page configuration
 st.set_page_config(
     page_title="ML Dataset & Code Generation Manager",
-    page_icon="📊",
+    page_icon="🤗",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Load custom CSS
 def load_css():
-    with open("assets/custom.css") as f:
+    """Load custom CSS styles"""
+    css_dir = Path("assets")
+    css_path = css_dir / "custom.css"
+    
+    if not css_path.exists():
+        # Create assets directory if it doesn't exist
+        css_dir.mkdir(exist_ok=True)
+        
+        # Create a basic CSS file if it doesn't exist
+        with open(css_path, "w") as f:
+            f.write("""
+            /* Custom styles for ML Dataset & Code Generation Manager */
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+            
+            h1, h2, h3, h4, h5, h6 {
+                font-family: 'Space Grotesk', sans-serif;
+                font-weight: 700;
+                color: #1A1C1F;
+            }
+            
+            body {
+                font-family: 'Inter', sans-serif;
+                color: #1A1C1F;
+                background-color: #F8F9FA;
+            }
+            
+            .stButton button {
+                background-color: #2563EB;
+                color: white;
+                border-radius: 4px;
+                border: none;
+                padding: 0.5rem 1rem;
+                font-weight: 600;
+            }
+            
+            .stButton button:hover {
+                background-color: #1D4ED8;
+            }
+            
+            /* Card styling */
+            .card {
+                background-color: white;
+                border-radius: 8px;
+                padding: 1.5rem;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                margin-bottom: 1rem;
+            }
+            
+            /* Accent colors */
+            .accent-primary {
+                color: #2563EB;
+            }
+            
+            .accent-secondary {
+                color: #84919A;
+            }
+            
+            .accent-success {
+                color: #10B981;
+            }
+            
+            .accent-warning {
+                color: #F59E0B;
+            }
+            
+            .accent-danger {
+                color: #EF4444;
+            }
+            """)
+    
+    # Load custom CSS
+    with open(css_path, "r") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-try:
-    load_css()
-except:
-    st.write("CSS file not found. Using default styling.")
-
-# App title and description
-st.markdown("""
-<div class="header">
-    <h1>ML Dataset & Code Generation Manager</h1>
-    <p>A platform for managing ML datasets and fine-tuning code generation models with Hugging Face integration</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Initialize session state
-if 'dataset' not in st.session_state:
-    st.session_state.dataset = None
-if 'dataset_name' not in st.session_state:
-    st.session_state.dataset_name = None
-if 'dataset_type' not in st.session_state:
-    st.session_state.dataset_type = None
-if 'dataset_info' not in st.session_state:
-    st.session_state.dataset_info = None
-if 'validation_results' not in st.session_state:
-    st.session_state.validation_results = None
-if 'database_id' not in st.session_state:
-    st.session_state.database_id = None
-
-# Sidebar navigation
-st.sidebar.markdown("""
-<div class="sidebar-header">
-    <h2>Navigation</h2>
-</div>
-""", unsafe_allow_html=True)
-
-page = st.sidebar.radio(
-    "Select a page",
-    ["Upload Dataset", "Explore & Analyze", "Hugging Face Integration", 
-     "Process with SmolaAgents", "Fine-Tune Code Models", "Code Quality Tools", "Database Management"]
-)
-
-st.sidebar.markdown("""
-<div class="sidebar-footer">
-    <p>Built with Streamlit & Hugging Face</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Main content
-if page == "Upload Dataset":
-    st.markdown("<h2>Upload Dataset</h2>", unsafe_allow_html=True)
-    render_dataset_uploader()
-    
-    if st.session_state.dataset is not None:
-        st.success(f"Dataset '{st.session_state.dataset_name}' loaded successfully!")
+def render_finetune_ui():
+    """
+    Renders the fine-tuning UI for code generation models.
+    """
+    try:
+        from components.fine_tuning.finetune_ui import render_finetune_ui as ft_ui
+        ft_ui()
+    except ImportError as e:
+        st.error(f"Could not load fine-tuning UI: {e}")
         
-        # Basic dataset info and preview
-        st.markdown("### Dataset Preview")
-        render_dataset_preview(st.session_state.dataset, st.session_state.dataset_type)
+        # Create default fine-tuning UI component if not exists
+        os.makedirs("components/fine_tuning", exist_ok=True)
+        if not os.path.exists("components/fine_tuning/__init__.py"):
+            with open("components/fine_tuning/__init__.py", "w") as f:
+                f.write('"""\nFine-tuning package for code generation models.\n"""\n')
         
-        # Validation
-        st.markdown("### Dataset Validation")
-        render_dataset_validation(st.session_state.dataset, st.session_state.dataset_type)
+        if not os.path.exists("components/fine_tuning/finetune_ui.py"):
+            with open("components/fine_tuning/finetune_ui.py", "w") as f:
+                f.write('''"""
+Streamlit UI for fine-tuning code generation models.
+"""
+import streamlit as st
+import pandas as pd
+import os
 
-elif page == "Explore & Analyze":
-    st.markdown("<h2>Explore & Analyze</h2>", unsafe_allow_html=True)
+def render_dataset_preparation():
+    """
+    Render the dataset preparation interface.
+    """
+    st.subheader("Dataset Preparation")
+    st.write("Prepare your dataset for fine-tuning code generation models.")
     
-    if st.session_state.dataset is None:
-        st.warning("Please upload a dataset first.")
-    else:
-        # Dataset statistics
-        st.markdown("### Dataset Statistics")
-        render_dataset_statistics(st.session_state.dataset, st.session_state.dataset_type)
-        
-        # Dataset visualization
-        st.markdown("### Dataset Visualization")
-        render_dataset_visualization(st.session_state.dataset, st.session_state.dataset_type)
-
-elif page == "Hugging Face Integration":
-    st.markdown("<h2>Hugging Face Integration</h2>", unsafe_allow_html=True)
-    
-    # Search for datasets
-    st.subheader("Search Hugging Face Datasets")
-    search_query = st.text_input("Search datasets", "")
-    search_button = st.button("Search")
-    
-    if search_button and search_query:
-        with st.spinner("Searching Hugging Face datasets..."):
-            search_results = search_huggingface_datasets(search_query)
-            if search_results:
-                st.success(f"Found {len(search_results)} datasets matching '{search_query}'")
-                
-                # Display results
-                for i, dataset in enumerate(search_results):
-                    with st.container():
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            st.markdown(f"**{dataset['name']}**")
-                            st.markdown(f"*{dataset.get('description', 'No description available')}*")
-                        with col2:
-                            if st.button("Load", key=f"load_{i}"):
-                                with st.spinner(f"Loading dataset {dataset['name']}..."):
-                                    try:
-                                        loaded_dataset = load_huggingface_dataset(dataset['id'])
-                                        st.session_state.dataset = loaded_dataset
-                                        st.session_state.dataset_name = dataset['name']
-                                        st.session_state.dataset_type = detect_dataset_format(loaded_dataset)
-                                        st.session_state.dataset_info = get_dataset_info(loaded_dataset)
-                                        st.success(f"Dataset '{dataset['name']}' loaded successfully!")
-                                        st.experimental_rerun()
-                                    except Exception as e:
-                                        st.error(f"Error loading dataset: {str(e)}")
+    # Dataset upload
+    uploaded_file = st.file_uploader("Upload your dataset", type=["csv", "json"])
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
             else:
-                st.warning(f"No datasets found matching '{search_query}'")
-    
-    # Dataset from Hugging Face
-    st.subheader("Load Dataset Directly")
-    dataset_id = st.text_input("Hugging Face Dataset ID", "")
-    if st.button("Load Dataset"):
-        if dataset_id:
-            with st.spinner(f"Loading dataset {dataset_id}..."):
-                try:
-                    loaded_dataset = load_huggingface_dataset(dataset_id)
-                    st.session_state.dataset = loaded_dataset
-                    st.session_state.dataset_name = dataset_id
-                    st.session_state.dataset_type = detect_dataset_format(loaded_dataset)
-                    st.session_state.dataset_info = get_dataset_info(loaded_dataset)
-                    st.success(f"Dataset '{dataset_id}' loaded successfully!")
-                    st.experimental_rerun()
-                except Exception as e:
-                    st.error(f"Error loading dataset: {str(e)}")
-        else:
-            st.warning("Please enter a dataset ID")
+                df = pd.read_json(uploaded_file)
+                
+            st.write("Dataset Preview:")
+            st.dataframe(df.head())
+            
+            # Example of data columns mapping
+            st.subheader("Column Mapping")
+            
+            input_col = st.selectbox("Select input column (e.g., code)", df.columns)
+            target_col = st.selectbox("Select target column (e.g., comment)", df.columns)
+            
+            # Sample transformation
+            if st.button("Apply Transformation"):
+                if input_col and target_col:
+                    # Example transformation: simple trim/clean
+                    df[input_col] = df[input_col].astype(str).str.strip()
+                    df[target_col] = df[target_col].astype(str).str.strip()
+                    
+                    st.write("Transformed Dataset:")
+                    st.dataframe(df.head())
+                    
+                    # Option to save processed dataset
+                    if st.button("Save Processed Dataset"):
+                        processed_path = os.path.join("datasets", "processed_dataset.csv")
+                        os.makedirs("datasets", exist_ok=True)
+                        df.to_csv(processed_path, index=False)
+                        st.success(f"Dataset saved to {processed_path}")
+        except Exception as e:
+            st.error(f"Error processing dataset: {e}")
 
-elif page == "Process with SmolaAgents":
-    st.markdown("<h2>Process with SmolaAgents</h2>", unsafe_allow_html=True)
+def render_model_training():
+    """
+    Render the model training interface.
+    """
+    st.subheader("Model Training")
+    st.write("Configure and start training your model.")
     
-    if st.session_state.dataset is None:
-        st.warning("Please upload a dataset first.")
+    # Model selection
+    model_options = [
+        "Salesforce/codet5-small",
+        "Salesforce/codet5-base",
+        "microsoft/codebert-base",
+        "microsoft/graphcodebert-base"
+    ]
+    
+    selected_model = st.selectbox("Select base model", model_options)
+    
+    # Training parameters
+    col1, col2 = st.columns(2)
+    with col1:
+        batch_size = st.number_input("Batch size", min_value=1, max_value=64, value=8)
+        epochs = st.number_input("Number of epochs", min_value=1, max_value=100, value=3)
+        learning_rate = st.number_input("Learning rate", min_value=0.00001, max_value=0.1, value=0.0001, format="%.5f")
+    
+    with col2:
+        max_input_length = st.number_input("Max input length", min_value=32, max_value=512, value=128)
+        max_target_length = st.number_input("Max target length", min_value=32, max_value=512, value=128)
+        task_type = st.selectbox("Task type", ["Code to Comment", "Comment to Code"])
+    
+    # Training button (placeholder)
+    if st.button("Start Training"):
+        st.info("Training would start here. This is a placeholder.")
+        # In a real implementation, this would call the training function
+        # and display a progress bar or redirect to a training monitoring page
+
+def render_model_testing():
+    """
+    Render the model testing interface.
+    """
+    st.subheader("Model Testing")
+    st.write("Test your fine-tuned model with custom inputs.")
+    
+    # Model selection
+    st.selectbox("Select fine-tuned model", ["No models available yet"])
+    
+    # Test input
+    if st.selectbox("Task type", ["Code to Comment", "Comment to Code"]) == "Code to Comment":
+        test_input = st.text_area("Enter code to generate a comment", 
+                                  value="def fibonacci(n):\\n    if n <= 1:\\n        return n\\n    else:\\n        return fibonacci(n-1) + fibonacci(n-2)")
+        placeholder = "# This function implements the Fibonacci sequence recursively..."
     else:
-        st.markdown("""
-        SmolaAgents are lightweight agents that can help process and transform your dataset.
-        """)
+        test_input = st.text_area("Enter comment to generate code", 
+                                 value="# A function that calculates the factorial of a number recursively")
+        placeholder = "def factorial(n):\\n    if n == 0:\\n        return 1\\n    else:\\n        return n * factorial(n-1)"
+    
+    # Generate button (placeholder)
+    if st.button("Generate"):
+        st.code(placeholder, language="python")
+        # In a real implementation, this would call the model inference function
+
+def render_finetune_ui():
+    """
+    Render the fine-tuning UI for code generation models.
+    """
+    st.title("Fine-Tune Code Generation Models")
+    
+    tabs = st.tabs(["Dataset Preparation", "Model Training", "Model Testing"])
+    
+    with tabs[0]:
+        render_dataset_preparation()
+    
+    with tabs[1]:
+        render_model_training()
+    
+    with tabs[2]:
+        render_model_testing()
+''')
         
-        operation = st.selectbox(
-            "Select operation", 
-            ["Data Cleaning", "Feature Engineering", "Data Transformation", "Custom Processing"]
-        )
+        # Try again after creating the files
+        try:
+            from components.fine_tuning.finetune_ui import render_finetune_ui as ft_ui
+            ft_ui()
+        except ImportError as e:
+            st.error(f"Still could not load fine-tuning UI after creating files: {e}")
+            st.info("Please restart the app to initialize the components.")
+
+def render_code_quality_ui():
+    """
+    Renders the code quality tools UI.
+    """
+    try:
+        from components.code_quality import render_code_quality_tools
+        render_code_quality_tools()
+    except ImportError:
+        st.error("Code quality tools not found. Implementing basic version.")
+        st.title("Code Quality Tools")
+        st.write("This section will provide tools for code linting, formatting, and testing.")
         
-        if operation == "Custom Processing":
-            custom_code = st.text_area("Enter custom processing code", height=200)
+        # Tabs for different code quality tools
+        tabs = st.tabs(["Linting", "Formatting", "Type Checking", "Testing"])
         
-        if st.button("Process Dataset"):
-            with st.spinner("Processing dataset with SmolaAgents..."):
+        with tabs[0]:
+            st.subheader("Code Linting")
+            st.write("Tools for checking code quality and style.")
+            st.code("# Coming soon: PyLint and Flake8 integration")
+        
+        with tabs[1]:
+            st.subheader("Code Formatting")
+            st.write("Tools for formatting code according to style guides.")
+            st.code("# Coming soon: Black and isort integration")
+        
+        with tabs[2]:
+            st.subheader("Type Checking")
+            st.write("Tools for checking type annotations.")
+            st.code("# Coming soon: MyPy integration")
+        
+        with tabs[3]:
+            st.subheader("Testing")
+            st.write("Tools for running tests and checking code coverage.")
+            st.code("# Coming soon: PyTest integration")
+
+def render_dataset_management_ui():
+    """
+    Renders the dataset management UI.
+    """
+    st.title("Dataset Management")
+    
+    # Tabs for different dataset operations
+    tabs = st.tabs(["Upload", "Preview", "Statistics", "Visualization", "Validation"])
+    
+    with tabs[0]:
+        try:
+            from components.dataset_uploader import render_dataset_uploader
+            render_dataset_uploader()
+        except ImportError:
+            st.subheader("Dataset Upload")
+            st.write("Upload your datasets in CSV or JSON format.")
+            
+            uploaded_file = st.file_uploader("Choose a file", type=["csv", "json"])
+            if uploaded_file is not None:
                 try:
-                    processed_dataset = process_with_smolagents(
-                        st.session_state.dataset, 
-                        operation,
-                        custom_code if operation == "Custom Processing" else None
-                    )
-                    
-                    st.session_state.dataset = processed_dataset
-                    st.success("Dataset processed successfully!")
-                    
-                    # Show preview of processed dataset
-                    st.subheader("Processed Dataset Preview")
-                    render_dataset_preview(processed_dataset, st.session_state.dataset_type)
-                    
-                except Exception as e:
-                    st.error(f"Error processing dataset: {str(e)}")
-
-elif page == "Fine-Tune Code Models":
-    # Render the fine-tuning UI
-    render_finetune_ui()
-
-elif page == "Code Quality Tools":
-    # Render the code quality tools
-    render_code_quality_tools()
-
-elif page == "Database Management":
-    st.markdown("<h2>Database Management</h2>", unsafe_allow_html=True)
-    
-    tab1, tab2, tab3 = st.tabs(["Datasets", "Training Jobs", "Code Quality Checks"])
-    
-    with tab1:
-        st.subheader("Stored Datasets")
-        datasets = DatasetOperations.get_all_datasets()
-        
-        if not datasets:
-            st.info("No datasets stored in the database yet.")
-        else:
-            # Display datasets table
-            datasets_data = []
-            for ds in datasets:
-                datasets_data.append({
-                    "ID": ds.id,
-                    "Name": ds.name,
-                    "Format": ds.format,
-                    "Rows": ds.rows,
-                    "Columns": ds.columns,
-                    "Source": ds.source or "Unknown",
-                    "Created": ds.created_at.strftime("%Y-%m-%d %H:%M")
-                })
-            
-            st.dataframe(pd.DataFrame(datasets_data), use_container_width=True)
-            
-            # Select dataset for detailed view
-            selected_dataset_id = st.selectbox(
-                "Select dataset for details",
-                options=[ds.id for ds in datasets],
-                format_func=lambda x: next((ds.name for ds in datasets if ds.id == x), "Unknown")
-            )
-            
-            if selected_dataset_id:
-                dataset = DatasetOperations.get_dataset_by_id(selected_dataset_id)
-                columns = DatasetOperations.get_column_info(selected_dataset_id)
-                
-                st.subheader(f"Dataset: {dataset.name}")
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Rows", dataset.rows)
-                with col2:
-                    st.metric("Columns", dataset.columns)
-                with col3:
-                    st.metric("Format", dataset.format)
-                
-                st.markdown("#### Description")
-                st.write(dataset.description or "No description available")
-                
-                st.markdown("#### Columns")
-                if columns:
-                    columns_data = []
-                    for col in columns:
-                        col_data = {
-                            "Name": col.name,
-                            "Type": col.data_type,
-                            "Missing (%)": f"{col.missing_percentage:.2f}%",
-                            "Unique Values": col.unique_values or "N/A"
-                        }
+                    if uploaded_file.name.endswith('.csv'):
+                        df = pd.read_csv(uploaded_file)
+                        dataset_type = "csv"
+                    else:
+                        df = pd.read_json(uploaded_file)
+                        dataset_type = "json"
                         
-                        # Add numeric stats if available
-                        if col.min_value is not None:
-                            col_data["Min"] = f"{col.min_value:.2f}"
-                            col_data["Max"] = f"{col.max_value:.2f}"
-                            col_data["Mean"] = f"{col.mean_value:.2f}"
-                            col_data["Std"] = f"{col.std_value:.2f}"
-                        
-                        columns_data.append(col_data)
-                    
-                    st.dataframe(pd.DataFrame(columns_data), use_container_width=True)
-                else:
-                    st.info("No column information available")
-                
-                # Button to delete dataset
-                if st.button("Delete Dataset", key="delete_dataset"):
-                    DatasetOperations.delete_dataset(selected_dataset_id)
-                    st.success(f"Dataset '{dataset.name}' deleted successfully")
-                    st.experimental_rerun()
-        
-        # Store current dataset
-        if st.session_state.dataset is not None:
-            st.subheader("Store Current Dataset")
-            
-            description = st.text_area(
-                "Dataset Description", 
-                value=f"Dataset loaded on {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-            )
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                source = st.selectbox("Source", ["Local", "Hugging Face", "Generated", "Processed", "Other"])
-            with col2:
-                source_url = st.text_input("Source URL/Path", value=st.session_state.get("dataset_source_url", ""))
-            
-            if st.button("Store in Database"):
-                try:
-                    # Store dataset info in database
-                    stored_dataset = DatasetOperations.store_dataframe_info(
-                        df=st.session_state.dataset,
-                        name=st.session_state.dataset_name,
-                        description=description,
-                        source=source,
-                        source_url=source_url
-                    )
-                    
-                    st.session_state.database_id = stored_dataset.id
-                    st.success(f"Dataset '{st.session_state.dataset_name}' stored in database with ID: {stored_dataset.id}")
+                    st.session_state["dataset"] = df
+                    st.session_state["dataset_type"] = dataset_type
+                    st.success(f"Successfully loaded {dataset_type.upper()} file with {df.shape[0]} rows and {df.shape[1]} columns.")
+                    st.dataframe(df.head())
                 except Exception as e:
-                    st.error(f"Error storing dataset: {str(e)}")
+                    st.error(f"Error: {e}")
     
-    with tab2:
-        st.subheader("Training Jobs")
-        jobs = TrainingOperations.get_all_training_jobs()
-        
-        if not jobs:
-            st.info("No training jobs in the database yet.")
+    with tabs[1]:
+        if "dataset" in st.session_state:
+            try:
+                from components.dataset_preview import render_dataset_preview
+                render_dataset_preview(st.session_state["dataset"], st.session_state["dataset_type"])
+            except ImportError:
+                st.subheader("Dataset Preview")
+                st.dataframe(st.session_state["dataset"].head(10))
         else:
-            # Display jobs table
-            jobs_data = []
-            for job in jobs:
-                jobs_data.append({
-                    "ID": job.id,
-                    "Name": job.name,
-                    "Model": job.model_type,
-                    "Task": job.task_type,
-                    "Status": job.status.capitalize(),
-                    "Dataset": job.dataset_id,
-                    "Created": job.created_at.strftime("%Y-%m-%d %H:%M")
-                })
-            
-            st.dataframe(pd.DataFrame(jobs_data), use_container_width=True)
-            
-            # Select job for detailed view
-            selected_job_id = st.selectbox(
-                "Select job for details",
-                options=[job.id for job in jobs],
-                format_func=lambda x: next((job.name for job in jobs if job.id == x), "Unknown")
-            )
-            
-            if selected_job_id:
-                job = TrainingOperations.get_training_job_by_id(selected_job_id)
-                logs = TrainingOperations.get_training_logs(selected_job_id)
-                
-                st.subheader(f"Training Job: {job.name}")
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Status", job.status.capitalize())
-                with col2:
-                    st.metric("Model", job.model_type)
-                with col3:
-                    st.metric("Task", job.task_type)
-                
-                st.markdown("#### Description")
-                st.write(job.description or "No description available")
-                
-                # Display hyperparameters
-                if job.hyperparameters:
-                    st.markdown("#### Hyperparameters")
-                    for param, value in job.hyperparameters.items():
-                        st.code(f"{param}: {value}")
-                
-                # Display metrics
-                if job.metrics:
-                    st.markdown("#### Metrics")
-                    metrics_df = pd.DataFrame([job.metrics])
-                    st.dataframe(metrics_df, use_container_width=True)
-                
-                # Display logs
-                if logs:
-                    st.markdown("#### Training Logs")
-                    logs_data = []
-                    for log in logs:
-                        logs_data.append({
-                            "Time": log.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                            "Level": log.level,
-                            "Message": log.message
-                        })
-                    
-                    st.dataframe(pd.DataFrame(logs_data), use_container_width=True)
-                
-                # Button to delete job
-                if st.button("Delete Job", key="delete_job"):
-                    TrainingOperations.delete_training_job(selected_job_id)
-                    st.success(f"Training job '{job.name}' deleted successfully")
-                    st.experimental_rerun()
+            st.info("Please upload a dataset first.")
     
-    with tab3:
-        st.subheader("Code Quality Checks")
-        checks = CodeQualityOperations.get_all_code_quality_checks()
-        
-        if not checks:
-            st.info("No code quality checks in the database yet.")
-        else:
-            # Display checks table
-            checks_data = []
-            for check in checks:
-                checks_data.append({
-                    "ID": check.id,
-                    "Filename": check.filename,
-                    "Tool": check.tool,
-                    "Score": check.score if check.score is not None else "N/A",
-                    "Issues": check.issues_count,
-                    "Created": check.created_at.strftime("%Y-%m-%d %H:%M")
-                })
-            
-            st.dataframe(pd.DataFrame(checks_data), use_container_width=True)
-            
-            # Select check for detailed view
-            selected_check_id = st.selectbox(
-                "Select check for details",
-                options=[check.id for check in checks],
-                format_func=lambda x: next((f"{check.filename} ({check.tool})" for check in checks if check.id == x), "Unknown")
-            )
-            
-            if selected_check_id:
-                check = next((c for c in checks if c.id == selected_check_id), None)
+    with tabs[2]:
+        if "dataset" in st.session_state:
+            try:
+                from components.dataset_statistics import render_dataset_statistics
+                render_dataset_statistics(st.session_state["dataset"], st.session_state["dataset_type"])
+            except ImportError:
+                st.subheader("Dataset Statistics")
+                st.write("Basic statistics:")
+                st.write(st.session_state["dataset"].describe())
                 
-                if check:
-                    st.subheader(f"Code Quality Check: {check.filename}")
+                # Missing values
+                missing_data = st.session_state["dataset"].isnull().sum()
+                st.write("Missing values per column:")
+                st.write(missing_data[missing_data > 0])
+        else:
+            st.info("Please upload a dataset first.")
+    
+    with tabs[3]:
+        if "dataset" in st.session_state:
+            try:
+                from components.dataset_visualization import render_dataset_visualization
+                render_dataset_visualization(st.session_state["dataset"], st.session_state["dataset_type"])
+            except ImportError:
+                st.subheader("Dataset Visualization")
+                
+                # Only show for numerical columns
+                numeric_cols = st.session_state["dataset"].select_dtypes(include=[np.number]).columns.tolist()
+                
+                if len(numeric_cols) > 0:
+                    col1, col2 = st.columns(2)
                     
-                    col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("Tool", check.tool)
-                    with col2:
-                        st.metric("Score", f"{check.score:.2f}" if check.score is not None else "N/A")
-                    with col3:
-                        st.metric("Issues", check.issues_count)
+                        x_axis = st.selectbox("X-axis", numeric_cols)
                     
-                    if check.report:
-                        st.markdown("#### Report")
-                        st.code(check.report)
+                    with col2:
+                        y_axis = st.selectbox("Y-axis", numeric_cols, index=min(1, len(numeric_cols)-1))
+                    
+                    fig = px.scatter(st.session_state["dataset"], x=x_axis, y=y_axis)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.write("No numerical columns available for visualization.")
+        else:
+            st.info("Please upload a dataset first.")
+    
+    with tabs[4]:
+        if "dataset" in st.session_state:
+            try:
+                from components.dataset_validation import render_dataset_validation
+                render_dataset_validation(st.session_state["dataset"], st.session_state["dataset_type"])
+            except ImportError:
+                st.subheader("Dataset Validation")
+                
+                # Simple validation checks
+                st.write("Dataset Shape:", st.session_state["dataset"].shape)
+                st.write("Duplicate Rows:", st.session_state["dataset"].duplicated().sum())
+                
+                # Missing values percentage
+                missing_percent = (st.session_state["dataset"].isnull().sum() / len(st.session_state["dataset"])) * 100
+                st.write("Missing Values Percentage:")
+                st.write(missing_percent[missing_percent > 0])
+        else:
+            st.info("Please upload a dataset first.")
+
+def main():
+    """
+    Main function to run the application.
+    """
+    # Load custom CSS
+    load_css()
+    
+    # Sidebar for navigation
+    st.sidebar.title("ML Dataset & Code Gen Manager")
+    
+    # Navigation
+    page = st.sidebar.radio("Navigation", ["Home", "Dataset Management", "Fine-Tuning", "Code Quality Tools"])
+    
+    # Display selected page
+    if page == "Home":
+        st.title("ML Dataset & Code Generation Manager")
+        st.write("Welcome to the ML Dataset & Code Generation Manager. This platform helps you manage ML datasets and fine-tune code generation models.")
+        
+        # Main features in cards
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            <div class="card">
+                <h3>Dataset Management</h3>
+                <p>Upload, analyze, visualize, and validate your ML datasets.</p>
+                <ul>
+                    <li>Support for CSV and JSON formats</li>
+                    <li>Statistical analysis and visualization</li>
+                    <li>Data validation and quality checks</li>
+                    <li>Hugging Face Hub integration</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div class="card">
+                <h3>Code Quality Tools</h3>
+                <p>Tools for ensuring high-quality code.</p>
+                <ul>
+                    <li>Code linting with PyLint</li>
+                    <li>Code formatting with Black and isort</li>
+                    <li>Type checking with MyPy</li>
+                    <li>Testing with PyTest</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div class="card">
+                <h3>Fine-Tuning</h3>
+                <p>Fine-tune code generation models on your custom datasets.</p>
+                <ul>
+                    <li>Support for CodeT5, CodeBERT models</li>
+                    <li>Code-to-comment and comment-to-code tasks</li>
+                    <li>Custom dataset preparation</li>
+                    <li>Model testing and evaluation</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div class="card">
+                <h3>Hugging Face Integration</h3>
+                <p>Seamless integration with Hugging Face Hub.</p>
+                <ul>
+                    <li>Search and load models and datasets</li>
+                    <li>Deploy fine-tuned models to Hugging Face Spaces</li>
+                    <li>Share and collaborate on models and datasets</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Get started section
+        st.subheader("Get Started")
+        st.write("To get started, navigate to the Dataset Management page to upload your data, or explore the Fine-Tuning page to train code generation models.")
+        
+    elif page == "Dataset Management":
+        render_dataset_management_ui()
+        
+    elif page == "Fine-Tuning":
+        render_finetune_ui()
+        
+    elif page == "Code Quality Tools":
+        render_code_quality_ui()
+
+if __name__ == "__main__":
+    main()

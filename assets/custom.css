@@ -1,165 +1,57 @@
-/* Custom CSS for ML Dataset & Code Generation Manager */
+/* Custom styles for ML Dataset & Code Generation Manager */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
 
-/* Global styles */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    color: #1A1C1F;
+}
+
 body {
     font-family: 'Inter', sans-serif;
     color: #1A1C1F;
+    background-color: #F8F9FA;
 }
 
-/* Header styles */
-.header h1 {
-    font-family: 'Space Grotesk', 'Inter', sans-serif;
-    color: #1A1C1F;
-    font-weight: 700;
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.header p {
-    font-size: 1.2rem;
-    color: #84919A;
-    margin-bottom: 2rem;
-}
-
-/* Sidebar styles */
-.sidebar-header h2 {
-    font-family: 'Space Grotesk', 'Inter', sans-serif;
-    font-weight: 600;
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.sidebar-footer {
-    position: absolute;
-    bottom: 1rem;
-    font-size: 0.8rem;
-    color: #84919A;
-}
-
-/* Card styles */
-.stcard {
-    background-color: #FFFFFF;
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 1.5rem;
-}
-
-.stcard-title {
-    font-family: 'Space Grotesk', 'Inter', sans-serif;
-    font-weight: 600;
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
-}
-
-/* Button styles */
-.stButton>button {
+.stButton button {
     background-color: #2563EB;
     color: white;
     border-radius: 4px;
+    border: none;
     padding: 0.5rem 1rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.stButton>button:hover {
-    background-color: #1D4ED8;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Metric card styles */
-.css-1ht1j8u {
-    background-color: #F8FAFC;
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: none;
-}
-
-/* Success/warning/error styles */
-div.element-container:has(div.stAlert) {
-    padding: 0.5rem 0;
-}
-
-/* Table styles */
-.dataframe {
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-/* Custom styles for code blocks */
-pre {
-    background-color: #F1F5F9;
-    border-radius: 6px;
-    padding: 1rem;
-}
-
-code {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 0.9rem;
-}
-
-/* Custom tabs styling */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 2rem;
-}
-
-.stTabs [data-baseweb="tab"] {
-    height: 3rem;
-    color: #64748B;
-    font-size: 1rem;
-}
-
-.stTabs [aria-selected="true"] {
-    color: #2563EB;
     font-weight: 600;
 }
 
-/* Dataset info styles */
-.dataset-info-card {
-    padding: 1.5rem;
-    background-color: #F8FAFC;
+.stButton button:hover {
+    background-color: #1D4ED8;
+}
+
+/* Card styling */
+.card {
+    background-color: white;
     border-radius: 8px;
-}
-
-/* Fine-tuning section styles */
-.finetune-steps {
-    margin-bottom: 2rem;
-}
-
-.finetune-step {
-    padding: 1rem;
-    background-color: #F8FAFC;
-    border-left: 4px solid #2563EB;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     margin-bottom: 1rem;
 }
 
-.finetune-step h4 {
-    margin-bottom: 0.5rem;
+/* Accent colors */
+.accent-primary {
     color: #2563EB;
 }
 
-/* Visualization container */
-.chart-container {
-    background-color: white;
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+.accent-secondary {
+    color: #84919A;
 }
 
-/* Progress bar styling */
-.stProgress > div > div > div > div {
-    background-color: #2563EB;
+.accent-success {
+    color: #10B981;
 }
 
-/* Training metrics styles */
-.metrics-card {
-    background-color: #F1F5F9;
-    border-radius: 8px;
-    padding: 1rem;
+.accent-warning {
+    color: #F59E0B;
 }
 
-.metrics-value {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #2563EB;
+.accent-danger {
+    color: #EF4444;
 }
