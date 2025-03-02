@@ -42,7 +42,7 @@ class Dataset(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     source = Column(String(255), nullable=True)  # local, huggingface, etc.
     source_url = Column(String(255), nullable=True)
-    metadata = Column(JSON, nullable=True)  # Any additional metadata
+    additional_data = Column(JSON, nullable=True)  # Any additional metadata
     
     # Relationships
     columns_info = relationship("DatasetColumn", back_populates="dataset", cascade="all, delete-orphan")
@@ -61,7 +61,7 @@ class Dataset(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "source": self.source,
             "source_url": self.source_url,
-            "metadata": self.metadata
+            "additional_data": self.additional_data
         }
 
 class DatasetColumn(Base):

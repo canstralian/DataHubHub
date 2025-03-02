@@ -196,7 +196,7 @@ class DatasetOperations:
             columns=len(df.columns),
             source=source,
             source_url=source_url,
-            metadata={
+            additional_data={
                 "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
                 "memory_usage": df.memory_usage(deep=True).sum() / (1024 * 1024)  # MB
             }
