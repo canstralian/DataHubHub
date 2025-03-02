@@ -264,6 +264,20 @@ class TrainingOperations:
             session.commit()
             session.refresh(job)
             return job
+            
+    @staticmethod
+    def delete_training_job(job_id):
+        """
+        Delete a training job.
+        
+        Args:
+            job_id: Job ID
+        """
+        with get_session() as session:
+            job = session.query(TrainingJob).filter(TrainingJob.id == job_id).first()
+            if job:
+                session.delete(job)
+                session.commit()
     
     @staticmethod
     def get_all_training_jobs():
