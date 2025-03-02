@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from database.models import (
     Dataset,
     DatasetColumn,
+    DatasetVersion,
     TrainingJob,
     TrainingLog,
     CodeQualityCheck,
@@ -13,7 +14,9 @@ from database.models import (
 )
 import pandas as pd
 import json
+import os
 from datetime import datetime
+from pathlib import Path
 
 # Initialize the database
 init_db()
@@ -24,7 +27,7 @@ class DatasetOperations:
     """
     
     @staticmethod
-    def create_dataset(name, description, format, rows, columns, source=None, source_url=None, metadata=None):
+    def create_dataset(name, description, format, rows, columns, source=None, source_url=None, additional_data=None):
         """
         Create a new dataset.
         
@@ -36,7 +39,7 @@ class DatasetOperations:
             columns: Number of columns
             source: Source of the dataset (local, huggingface, etc.)
             source_url: URL or path to the dataset source
-            metadata: Additional metadata
+            additional_data: Additional metadata
             
         Returns:
             Newly created Dataset object
@@ -50,7 +53,7 @@ class DatasetOperations:
                 columns=columns,
                 source=source,
                 source_url=source_url,
-                metadata=metadata
+                additional_data=additional_data
             )
             session.add(dataset)
             session.commit()
@@ -434,6 +437,307 @@ class TrainingOperations:
         """
         with get_session() as session:
             return session.query(TrainingLog).filter(TrainingLog.training_job_id == job_id).order_by(TrainingLog.timestamp).all()
+
+class DatasetVersionOperations:
+    """
+    Operations for working with dataset versions in the database.
+    """
+    
+    @staticmethod
+    def create_version(dataset_id, version_id, file_path, description=None, parent_version_id=None, metadata=None):
+        """
+        Create a new dataset version.
+        
+        Args:
+            dataset_id: Dataset ID
+            version_id: Version ID (unique identifier)
+            file_path: Path to the stored version file
+            description: Version description
+            parent_version_id: Parent version ID
+            metadata: Version metadata
+            
+        Returns:
+            Newly created DatasetVersion object
+        """
+        with get_session() as session:
+            version = DatasetVersion(
+                dataset_id=dataset_id,
+                version_id=version_id,
+                file_path=file_path,
+                description=description,
+                parent_version_id=parent_version_id,
+                metadata=metadata
+            )
+            session.add(version)
+            
+            # Update the dataset's current version ID
+            dataset = session.query(Dataset).filter(Dataset.id == dataset_id).first()
+            if dataset:
+                dataset.current_version_id = version_id
+            
+            session.commit()
+            session.refresh(version)
+            return version
+    
+    @staticmethod
+    def get_versions(dataset_id):
+        """
+        Get all versions for a dataset.
+        
+        Args:
+            dataset_id: Dataset ID
+            
+        Returns:
+            List of DatasetVersion objects
+        """
+        with get_session() as session:
+            return session.query(DatasetVersion).filter(
+                DatasetVersion.dataset_id == dataset_id
+            ).order_by(DatasetVersion.created_at).all()
+    
+    @staticmethod
+    def get_version(dataset_id, version_id):
+        """
+        Get a specific version of a dataset.
+        
+        Args:
+            dataset_id: Dataset ID
+            version_id: Version ID
+            
+        Returns:
+            DatasetVersion object
+        """
+        with get_session() as session:
+            return session.query(DatasetVersion).filter(
+                DatasetVersion.dataset_id == dataset_id,
+                DatasetVersion.version_id == version_id
+            ).first()
+    
+    @staticmethod
+    def get_latest_version(dataset_id):
+        """
+        Get the latest version of a dataset.
+        
+        Args:
+            dataset_id: Dataset ID
+            
+        Returns:
+            DatasetVersion object
+        """
+        with get_session() as session:
+            return session.query(DatasetVersion).filter(
+                DatasetVersion.dataset_id == dataset_id
+            ).order_by(DatasetVersion.created_at.desc()).first()
+    
+    @staticmethod
+    def create_version_from_dataframe(dataset_id, df, description=None, parent_version_id=None):
+        """
+        Create a new version from a pandas DataFrame.
+        
+        Args:
+            dataset_id: Dataset ID
+            df: Pandas DataFrame with dataset content
+            description: Version description
+            parent_version_id: Parent version ID
+            
+        Returns:
+            Newly created DatasetVersion object
+        """
+        import hashlib
+        
+        # Create version ID based on content hash and timestamp
+        content_hash = hashlib.md5(df.to_json().encode()).hexdigest()[:8]
+        timestamp = datetime.now()
+        version_id = f"{timestamp.strftime('%Y%m%d%H%M%S')}_{content_hash}"
+        
+        # Create metadata
+        metadata = {
+            "rows": len(df),
+            "columns": len(df.columns),
+            "column_names": list(df.columns),
+            "content_hash": content_hash,
+            "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
+            "memory_usage": df.memory_usage(deep=True).sum() / (1024 * 1024)  # MB
+        }
+        
+        # Ensure version directory exists
+        version_dir = Path("database/data/versions")
+        version_dir.mkdir(exist_ok=True, parents=True)
+        
+        # Save dataset to parquet file
+        file_path = str(version_dir / f"dataset_{dataset_id}_version_{version_id}.parquet")
+        df.to_parquet(file_path)
+        
+        # Create version in database
+        return DatasetVersionOperations.create_version(
+            dataset_id=dataset_id,
+            version_id=version_id,
+            file_path=file_path,
+            description=description,
+            parent_version_id=parent_version_id,
+            metadata=metadata
+        )
+    
+    @staticmethod
+    def load_version_data(version):
+        """
+        Load dataset data for a version.
+        
+        Args:
+            version: DatasetVersion object
+            
+        Returns:
+            Pandas DataFrame with dataset content
+        """
+        if not os.path.exists(version.file_path):
+            raise FileNotFoundError(f"Dataset file for version {version.version_id} not found at {version.file_path}")
+        
+        return pd.read_parquet(version.file_path)
+    
+    @staticmethod
+    def compare_versions(dataset_id, version_id1, version_id2):
+        """
+        Compare two versions of a dataset.
+        
+        Args:
+            dataset_id: Dataset ID
+            version_id1: ID of the first version
+            version_id2: ID of the second version
+            
+        Returns:
+            Dictionary with comparison results
+        """
+        # Get versions
+        version1 = DatasetVersionOperations.get_version(dataset_id, version_id1)
+        version2 = DatasetVersionOperations.get_version(dataset_id, version_id2)
+        
+        if not version1 or not version2:
+            missing = []
+            if not version1:
+                missing.append(version_id1)
+            if not version2:
+                missing.append(version_id2)
+            raise ValueError(f"Versions not found: {', '.join(missing)}")
+        
+        # Load data
+        df1 = DatasetVersionOperations.load_version_data(version1)
+        df2 = DatasetVersionOperations.load_version_data(version2)
+        
+        # Basic comparison
+        comparison = {
+            "version1": version_id1,
+            "version2": version_id2,
+            "version1_timestamp": version1.created_at,
+            "version2_timestamp": version2.created_at,
+            "rows_diff": len(df2) - len(df1),
+            "columns_diff": {},
+            "columns_added": [],
+            "columns_removed": []
+        }
+        
+        # Check for added/removed columns
+        columns1 = set(df1.columns)
+        columns2 = set(df2.columns)
+        comparison["columns_added"] = list(columns2 - columns1)
+        comparison["columns_removed"] = list(columns1 - columns2)
+        
+        # Compare common columns
+        common_columns = columns1.intersection(columns2)
+        for col in common_columns:
+            if df1[col].dtype != df2[col].dtype:
+                comparison["columns_diff"][col] = {
+                    "type_changed": True,
+                    "type1": str(df1[col].dtype),
+                    "type2": str(df2[col].dtype)
+                }
+            elif df1[col].equals(df2[col]):
+                # Columns are identical
+                pass
+            else:
+                # Columns have different values
+                comparison["columns_diff"][col] = {
+                    "type_changed": False,
+                    "values_changed": True
+                }
+        
+        return comparison
+    
+    @staticmethod
+    def restore_version(dataset_id, version_id, description=None):
+        """
+        Restore a previous version of a dataset as a new version.
+        
+        Args:
+            dataset_id: Dataset ID
+            version_id: ID of the version to restore
+            description: Description for the new version
+            
+        Returns:
+            Newly created DatasetVersion object with restored data
+        """
+        # Get version to restore
+        version_to_restore = DatasetVersionOperations.get_version(dataset_id, version_id)
+        if not version_to_restore:
+            raise ValueError(f"Version {version_id} not found for dataset {dataset_id}")
+        
+        # Load data from the version
+        df = DatasetVersionOperations.load_version_data(version_to_restore)
+        
+        # Create new version with restored data
+        if description is None:
+            description = f"Restored from version {version_id}"
+        
+        return DatasetVersionOperations.create_version_from_dataframe(
+            dataset_id=dataset_id,
+            df=df,
+            description=description,
+            parent_version_id=version_id
+        )
+    
+    @staticmethod
+    def delete_version(dataset_id, version_id):
+        """
+        Delete a specific version of a dataset.
+        
+        Args:
+            dataset_id: Dataset ID
+            version_id: ID of the version to delete
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        with get_session() as session:
+            version = session.query(DatasetVersion).filter(
+                DatasetVersion.dataset_id == dataset_id,
+                DatasetVersion.version_id == version_id
+            ).first()
+            
+            if not version:
+                return False
+            
+            # Check if this is the current version for the dataset
+            dataset = session.query(Dataset).filter(Dataset.id == dataset_id).first()
+            if dataset and dataset.current_version_id == version_id:
+                # Find the most recent version that isn't this one
+                new_current = session.query(DatasetVersion).filter(
+                    DatasetVersion.dataset_id == dataset_id,
+                    DatasetVersion.version_id != version_id
+                ).order_by(DatasetVersion.created_at.desc()).first()
+                
+                if new_current:
+                    dataset.current_version_id = new_current.version_id
+                else:
+                    dataset.current_version_id = None
+            
+            # Delete the file if it exists
+            if version.file_path and os.path.exists(version.file_path):
+                os.remove(version.file_path)
+            
+            # Delete from database
+            session.delete(version)
+            session.commit()
+            
+            return True
 
 class CodeQualityOperations:
     """

@@ -43,10 +43,12 @@ class Dataset(Base):
     source = Column(String(255), nullable=True)  # local, huggingface, etc.
     source_url = Column(String(255), nullable=True)
     additional_data = Column(JSON, nullable=True)  # Any additional metadata
+    current_version_id = Column(String(255), nullable=True)  # Current active version ID
     
     # Relationships
     columns_info = relationship("DatasetColumn", back_populates="dataset", cascade="all, delete-orphan")
     training_jobs = relationship("TrainingJob", back_populates="dataset", cascade="all, delete-orphan")
+    versions = relationship("DatasetVersion", back_populates="dataset", cascade="all, delete-orphan")
     
     def to_dict(self):
         """Convert the model to a dictionary."""
@@ -61,7 +63,8 @@ class Dataset(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "source": self.source,
             "source_url": self.source_url,
-            "additional_data": self.additional_data
+            "additional_data": self.additional_data,
+            "current_version_id": self.current_version_id
         }
 
 class DatasetColumn(Base):
@@ -170,6 +173,37 @@ class TrainingLog(Base):
             "level": self.level,
             "message": self.message,
             "metrics": self.metrics
+        }
+
+class DatasetVersion(Base):
+    """
+    Model for storing dataset version information.
+    """
+    __tablename__ = "dataset_versions"
+    
+    id = Column(Integer, primary_key=True)
+    dataset_id = Column(Integer, ForeignKey("datasets.id"), nullable=False)
+    version_id = Column(String(255), nullable=False, unique=True)
+    parent_version_id = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    metadata = Column(JSON, nullable=True)  # Contains info like rows, columns, hash, etc.
+    file_path = Column(String(255), nullable=False)  # Path to the stored version file
+    
+    # Relationships
+    dataset = relationship("Dataset", back_populates="versions")
+    
+    def to_dict(self):
+        """Convert the model to a dictionary."""
+        return {
+            "id": self.id,
+            "dataset_id": self.dataset_id,
+            "version_id": self.version_id,
+            "parent_version_id": self.parent_version_id,
+            "description": self.description,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "metadata": self.metadata,
+            "file_path": self.file_path
         }
 
 class CodeQualityCheck(Base):

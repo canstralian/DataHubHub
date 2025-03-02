@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.arrow-cpp
     pkgs.tk
     pkgs.tcl
     pkgs.qhull

@@ -291,7 +291,7 @@ def render_dataset_management_ui():
     st.title("Dataset Management")
     
     # Tabs for different dataset operations
-    tabs = st.tabs(["Upload", "Preview", "Statistics", "Visualization", "Validation"])
+    tabs = st.tabs(["Upload", "Preview", "Statistics", "Visualization", "Validation", "Version Control"])
     
     with tabs[0]:
         try:
@@ -389,6 +389,69 @@ def render_dataset_management_ui():
                 missing_percent = (st.session_state["dataset"].isnull().sum() / len(st.session_state["dataset"])) * 100
                 st.write("Missing Values Percentage:")
                 st.write(missing_percent[missing_percent > 0])
+        else:
+            st.info("Please upload a dataset first.")
+    
+    with tabs[5]:
+        if "dataset" in st.session_state:
+            try:
+                from components.dataset_version_control import render_version_control_ui, render_save_version_ui, render_version_visualization
+                
+                # If we have a dataset ID in session state, use it, otherwise prompt to save first
+                if "dataset_id" in st.session_state:
+                    dataset_id = st.session_state["dataset_id"]
+                    
+                    # Show dataset version control UI
+                    render_version_control_ui(dataset_id, st.session_state.get("dataset"))
+                    
+                    # Show save version UI
+                    st.divider()
+                    if st.session_state.get("dataset") is not None:
+                        new_version = render_save_version_ui(dataset_id, st.session_state["dataset"])
+                        if new_version:
+                            st.success(f"Created new version: {new_version.version_id}")
+                    
+                    # Show version visualization
+                    st.divider()
+                    render_version_visualization(dataset_id)
+                else:
+                    # No dataset ID yet, so prompt to save the dataset first
+                    st.info("To use version control, first save this dataset to the database.")
+                    
+                    dataset_name = st.text_input("Dataset Name", value="My Dataset")
+                    dataset_description = st.text_area("Dataset Description", value="Dataset uploaded for analysis")
+                    
+                    if st.button("Save Dataset to Database"):
+                        # Import database operations
+                        from database.operations import DatasetOperations, DatasetVersionOperations
+                        
+                        # Store dataset in database
+                        dataset = DatasetOperations.store_dataframe_info(
+                            df=st.session_state["dataset"],
+                            name=dataset_name,
+                            description=dataset_description,
+                            source="local_upload"
+                        )
+                        
+                        # Store as initial version
+                        initial_version = DatasetVersionOperations.create_version_from_dataframe(
+                            dataset_id=dataset.id,
+                            df=st.session_state["dataset"],
+                            description="Initial version"
+                        )
+                        
+                        # Store dataset ID in session state
+                        st.session_state["dataset_id"] = dataset.id
+                        
+                        st.success(f"Dataset saved to database with ID: {dataset.id}")
+                        st.success(f"Initial version created: {initial_version.version_id}")
+                        
+                        # Rerun to show version control UI
+                        st.experimental_rerun()
+            except ImportError as e:
+                st.subheader("Dataset Version Control")
+                st.error(f"Could not load version control components: {e}")
+                st.info("Please make sure all required components are installed.")
         else:
             st.info("Please upload a dataset first.")
 
