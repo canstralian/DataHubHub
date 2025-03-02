@@ -1,71 +1,85 @@
 # ML Dataset & Code Generation Manager
 
-A comprehensive platform for ML dataset management with Hugging Face integration, fine-tuning capabilities, and code quality tools.
+A comprehensive platform for ML dataset management and code generation with Hugging Face integration.
 
 ## Features
 
-- **Dataset Management**: Upload, analyze, and validate ML datasets
-- **Hugging Face Integration**: Search and load datasets from Hugging Face Hub
-- **Dataset Visualization**: Interactive charts and statistics for data exploration
-- **Fine-Tuning**: Custom fine-tuning of code generation models
-- **Database Integration**: Persistent storage for datasets and training jobs
-- **Code Quality Tools**: Tools for code linting, formatting, and testing
+- **Dataset Management**: Upload, explore, and manage machine learning datasets
+- **Data Visualization**: Visualize dataset statistics and distributions
+- **Code Generation**: Fine-tune models for code generation tasks
+- **Code Quality Tools**: Improve code quality with integrated formatters, linters, and type checkers
 
-## Getting Started
+## Technology Stack
 
-### Prerequisites
-
-- Python 3.8+
-- Streamlit
-- Pandas, NumPy, Plotly
-- HuggingFace libraries (transformers, datasets)
-- SQLAlchemy
-
-### Installation
-
-Clone the repository and install the required packages:
-
-```bash
-git clone https://github.com/yourusername/ml-dataset-code-generation-manager.git
-cd ml-dataset-code-generation-manager
-pip install -r requirements.txt
-```
-
-### Running the Application
-
-```bash
-streamlit run main.py
-```
-
-The application will be available at `http://localhost:5000`.
+- **Frontend**: Streamlit
+- **Backend**: Python
+- **Database**: SQLite (via SQLAlchemy)
+- **ML Integration**: Hugging Face Transformers, Datasets
+- **Visualization**: Plotly, Matplotlib
 
 ## Project Structure
 
-- `main.py`: Main application entry point
-- `assets/`: CSS and static assets
-- `components/`: UI components and modules
-  - `dataset_uploader.py`: Dataset upload functionality
-  - `dataset_preview.py`: Dataset preview component
-  - `dataset_statistics.py`: Statistical analysis of datasets
-  - `dataset_validation.py`: Dataset validation tools
-  - `dataset_visualization.py`: Data visualization components
-  - `fine_tuning/`: Fine-tuning components and models
-  - `code_quality.py`: Code quality tools
-- `database/`: Database models and operations
-- `utils/`: Utility functions and helpers
+```
+.
+├── app.py                     # Main application entry point
+├── components/                # UI components
+│   ├── code_quality.py        # Code quality tools
+│   ├── dataset_preview.py     # Dataset preview component
+│   ├── dataset_statistics.py  # Dataset statistics component
+│   ├── dataset_uploader.py    # Dataset upload component
+│   ├── dataset_validation.py  # Dataset validation component
+│   ├── dataset_visualization.py # Dataset visualization component
+│   └── fine_tuning/           # Fine-tuning components
+│       ├── finetune_ui.py     # Fine-tuning UI
+│       └── model_interface.py # Model interface
+├── database/                  # Database configuration
+│   ├── models.py              # Database models
+│   └── operations.py          # Database operations
+├── utils/                     # Utility functions
+│   ├── dataset_utils.py       # Dataset utilities
+│   ├── huggingface_integration.py # Hugging Face integration
+│   └── smolagents_integration.py # SmolaAgents integration
+└── assets/                    # Static assets
+```
 
-## Deploying to Hugging Face Spaces
+## Deployment
 
-1. Create a new Space on Hugging Face Hub
-2. Select the Streamlit SDK
-3. Connect your GitHub repository or upload the files directly
-4. The Space will automatically deploy the application
+This application is designed to be deployed as a Hugging Face Space.
+
+### Hugging Face Space Deployment
+
+1. Fork this repository
+2. Create a new Hugging Face Space
+3. Connect the forked repository to your Space
+4. The application will be deployed automatically
+
+### Local Development
+
+1. Clone the repository
+2. Install dependencies:
+   ```
+   pip install streamlit pandas numpy plotly matplotlib scikit-learn SQLAlchemy huggingface-hub datasets transformers torch
+   ```
+3. Run the application:
+   ```
+   streamlit run app.py
+   ```
+
+## Configuration
+
+- `.streamlit/config.toml`: Streamlit configuration
+- `.streamlit/secrets.toml`: Secrets and API keys
+- `huggingface-spacefile`: Hugging Face Space configuration
+
+## API Keys
+
+To use the Hugging Face integration features, add your Hugging Face API token to `.streamlit/secrets.toml`:
+
+```toml
+[huggingface]
+hf_token = "YOUR_HF_TOKEN"
+```
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgements
-
-- [Hugging Face](https://huggingface.co/) for their amazing models and datasets
-- [Streamlit](https://streamlit.io/) for the awesome UI framework
