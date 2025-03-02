@@ -1,0 +1,116 @@
+Below is a design proposal for a Hugging Face–based system that lets users fine-tune a code generation model via a simple Streamlit interface.
+
+Overview:
+	1.	Model & Library Setup:
+      •   Use a pre-trained code generation model (e.g., CodeT5 or CodeT5-base) from Hugging Face.
+      •   Leverage the Hugging Face Transformers and Datasets libraries together with the Hugging Face Trainer API to perform fine-tuning.
+	2.	Streamlit Interface:
+      •   Input Section: Users can upload a small dataset (e.g., a CSV file with code and target comments) or manually enter a few fine-tuning examples.
+      •   Hyperparameter Controls: Sliders or input boxes for settings like learning rate, number of epochs, batch size, and maybe even a choice of optimizer.
+      •   Execution Controls: Buttons to start fine-tuning and to monitor training progress (using, for example, real-time logging or a progress bar).
+      •   Output Section: Display training metrics (loss curves, evaluation scores) and allow users to run inference on new prompts once fine-tuning completes.
+	3.	Back-end Process:
+      •   When the user initiates fine-tuning, the uploaded dataset is preprocessed (tokenization using the model’s tokenizer).
+      •   A Trainer object is configured with the user-specified hyperparameters.
+      •   Fine-tuning is launched (this can run in a background thread or via caching intermediate results).
+      •   Once training is complete, the updated model can be saved to disk (or even directly loaded into the interface for inference).
+	4.	Deployment & Reproducibility:
+      •   The whole pipeline (data upload, preprocessing, training, evaluation, and inference) should be reproducible.
+      •   Optionally, support saving the fine-tuned model and the training configuration to allow users to share their work.
+
+Example Code Snippet (Simplified):
+
+Below is a simplified version of what the Streamlit app might look like. (Note: In a production setup, you would want proper error handling and asynchronous processing.)
+
+import streamlit as st
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, Trainer, TrainingArguments
+from datasets import load_dataset, Dataset
+import torch
+
+# Title
+st.title("Fine-Tune Code Generation Model with Hugging Face & Streamlit")
+
+# Sidebar: Hyperparameters
+st.sidebar.header("Training Hyperparameters")
+learning_rate = st.sidebar.slider("Learning Rate", 1e-6, 5e-5, 2e-5, 1e-6)
+epochs = st.sidebar.number_input("Epochs", 1, 10, 3)
+batch_size = st.sidebar.number_input("Batch Size", 4, 32, 8)
+
+# Upload your fine-tuning data: CSV file with columns "input" and "target"
+uploaded_file = st.file_uploader("Upload your fine-tuning dataset (CSV)", type="csv")
+
+if uploaded_file is not None:
+    import pandas as pd
+    df = pd.read_csv(uploaded_file)
+    st.write("Dataset preview:", df.head())
+    # Convert to Hugging Face Dataset
+    dataset = Dataset.from_pandas(df)
+else:
+    st.info("Please upload a CSV dataset with columns 'input' and 'target'.")
+
+# Model selection
+model_name = st.selectbox("Choose a model", ["Salesforce/codet5-base"])
+
+# Load model and tokenizer
+@st.cache_resource(show_spinner=False)
+def load_model_and_tokenizer(name):
+    tokenizer = AutoTokenizer.from_pretrained(name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(name)
+    return tokenizer, model
+
+tokenizer, model = load_model_and_tokenizer(model_name)
+
+# Preprocess function for tokenization
+def preprocess_function(examples):
+    inputs = [f"translate code to comment: {ex}" for ex in examples["input"]]
+    model_inputs = tokenizer(inputs, max_length=128, truncation=True)
+    with tokenizer.as_target_tokenizer():
+        labels = tokenizer(examples["target"], max_length=64, truncation=True)
+    model_inputs["labels"] = labels["input_ids"]
+    return model_inputs
+
+if uploaded_file is not None:
+    tokenized_dataset = dataset.map(preprocess_function, batched=True)
+    
+    # Setup training arguments
+    training_args = TrainingArguments(
+        output_dir="./results",
+        num_train_epochs=epochs,
+        per_device_train_batch_size=batch_size,
+        learning_rate=learning_rate,
+        logging_steps=10,
+        logging_dir='./logs',
+        report_to="none"
+    )
+    
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=tokenized_dataset,
+    )
+    
+    if st.button("Start Fine-Tuning"):
+        st.info("Fine-tuning started... This might take a while.")
+        trainer.train()
+        st.success("Fine-tuning complete!")
+        
+        # Save the model to disk (or load it for inference)
+        model.save_pretrained("fine_tuned_model")
+        tokenizer.save_pretrained("fine_tuned_model")
+        st.write("Model saved to 'fine_tuned_model'.")
+        
+        # Option to run inference on new inputs
+        user_input = st.text_area("Enter a new code prompt for inference:")
+        if user_input:
+            inputs = tokenizer(f"translate code to comment: {user_input}", return_tensors="pt", truncation=True)
+            outputs = model.generate(**inputs, max_length=64)
+            generated_comment = tokenizer.decode(outputs[0], skip_special_tokens=True)
+            st.write("Generated comment:", generated_comment)
+
+Key Points:
+   •   User Interaction: The interface lets users set hyperparameters, upload datasets, and start fine-tuning.
+   •   Model Integration: It uses Hugging Face’s pre-trained CodeT5 model and tokenizer, then fine-tunes on user-provided examples.
+   •   Reproducibility: The pipeline includes caching, dataset conversion, and saving the final model.
+   •   Extensibility: You can later add more options (e.g., additional hyperparameters, evaluation metrics, visualization of training progress).
+
+This design should give you a robust, end-to-end solution to let users easily fine-tune a code generation model through a Streamlit interface. Would you like further details on any component of the design?

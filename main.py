@@ -9,13 +9,15 @@ from components.dataset_preview import render_dataset_preview
 from components.dataset_statistics import render_dataset_statistics
 from components.dataset_validation import render_dataset_validation
 from components.dataset_visualization import render_dataset_visualization
+from components.fine_tuning import render_finetune_ui
+from components.code_quality import render_code_quality_tools
 from utils.huggingface_integration import search_huggingface_datasets, load_huggingface_dataset
 from utils.dataset_utils import get_dataset_info, detect_dataset_format
 from utils.smolagents_integration import process_with_smolagents
 
 # Set page configuration
 st.set_page_config(
-    page_title="ML Dataset Manager",
+    page_title="ML Dataset & Code Generation Manager",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -34,8 +36,8 @@ except:
 # App title and description
 st.markdown("""
 <div class="header">
-    <h1>ML Dataset Manager</h1>
-    <p>A platform for managing and analyzing machine learning datasets with Hugging Face integration</p>
+    <h1>ML Dataset & Code Generation Manager</h1>
+    <p>A platform for managing ML datasets and fine-tuning code generation models with Hugging Face integration</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -60,7 +62,8 @@ st.sidebar.markdown("""
 
 page = st.sidebar.radio(
     "Select a page",
-    ["Upload Dataset", "Explore & Analyze", "Hugging Face Integration", "Process with SmolaAgents"]
+    ["Upload Dataset", "Explore & Analyze", "Hugging Face Integration", 
+     "Process with SmolaAgents", "Fine-Tune Code Models", "Code Quality Tools"]
 )
 
 st.sidebar.markdown("""
@@ -78,12 +81,12 @@ if page == "Upload Dataset":
         st.success(f"Dataset '{st.session_state.dataset_name}' loaded successfully!")
         
         # Basic dataset info and preview
-        with st.expander("Dataset Preview", expanded=True):
-            render_dataset_preview(st.session_state.dataset, st.session_state.dataset_type)
+        st.markdown("### Dataset Preview")
+        render_dataset_preview(st.session_state.dataset, st.session_state.dataset_type)
         
         # Validation
-        with st.expander("Dataset Validation", expanded=True):
-            render_dataset_validation(st.session_state.dataset, st.session_state.dataset_type)
+        st.markdown("### Dataset Validation")
+        render_dataset_validation(st.session_state.dataset, st.session_state.dataset_type)
 
 elif page == "Explore & Analyze":
     st.markdown("<h2>Explore & Analyze</h2>", unsafe_allow_html=True)
@@ -92,12 +95,12 @@ elif page == "Explore & Analyze":
         st.warning("Please upload a dataset first.")
     else:
         # Dataset statistics
-        with st.expander("Dataset Statistics", expanded=True):
-            render_dataset_statistics(st.session_state.dataset, st.session_state.dataset_type)
+        st.markdown("### Dataset Statistics")
+        render_dataset_statistics(st.session_state.dataset, st.session_state.dataset_type)
         
         # Dataset visualization
-        with st.expander("Dataset Visualization", expanded=True):
-            render_dataset_visualization(st.session_state.dataset, st.session_state.dataset_type)
+        st.markdown("### Dataset Visualization")
+        render_dataset_visualization(st.session_state.dataset, st.session_state.dataset_type)
 
 elif page == "Hugging Face Integration":
     st.markdown("<h2>Hugging Face Integration</h2>", unsafe_allow_html=True)
@@ -191,3 +194,11 @@ elif page == "Process with SmolaAgents":
                     
                 except Exception as e:
                     st.error(f"Error processing dataset: {str(e)}")
+
+elif page == "Fine-Tune Code Models":
+    # Render the fine-tuning UI
+    render_finetune_ui()
+
+elif page == "Code Quality Tools":
+    # Render the code quality tools
+    render_code_quality_tools()

@@ -4,11 +4,27 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "black>=25.1.0",
     "datasets>=3.3.2",
     "huggingface-hub>=0.29.1",
+    "isort>=6.0.1",
+    "mypy>=1.15.0",
     "numpy>=2.2.3",
     "pandas>=2.2.3",
     "plotly>=6.0.0",
+    "pylint>=3.3.4",
+    "pytest>=8.3.4",
     "scikit-learn>=1.6.1",
     "streamlit>=1.42.2",
+    "torch>=2.6.0",
+    "transformers>=4.49.0",
 ]
+
+[[tool.uv.index]]
+explicit = true
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
