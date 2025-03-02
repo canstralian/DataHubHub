@@ -1,0 +1,48 @@
+name: Hugging Face Space Interaction
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  interact-with-space:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install huggingface_hub requests
+
+      - name: Login to Hugging Face
+        run: echo "${{ secrets.HF_TOKEN }}" | huggingface-cli login --token
+
+      - name: Example interaction with Space
+        run: |
+          python -c "
+          import requests
+          import os
+
+          HF_TOKEN = os.environ.get('HF_TOKEN')
+          headers = {'Authorization': f'Bearer {HF_TOKEN}'}
+          API_URL = 'YOUR_SPACE_API_URL' # Replace with your Space's API URL.
+
+          payload = {'inputs': 'Your input data'}
+
+          response = requests.post(API_URL, headers=headers, json=payload)
+          if response.status_code == 200:
+              print(response.json())
+          else:
+              print(f'Error: {response.status_code}, {response.text}')
+          "
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
