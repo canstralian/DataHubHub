@@ -21,7 +21,7 @@ import os
 import json
 
 # Create engine and session
-DATABASE_URL = "sqlite:///database/mlmanager.db"
+DATABASE_URL = "sqlite:///database/data/mlmanager.db"
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
@@ -201,6 +201,8 @@ class CodeQualityCheck(Base):
 # Create all tables
 def init_db():
     """Initialize the database and create all tables."""
+    # Ensure database directory exists
+    os.makedirs(os.path.dirname(DATABASE_URL.replace('sqlite:///', '')), exist_ok=True)
     Base.metadata.create_all(engine)
 
 # Helper function to get a database session
