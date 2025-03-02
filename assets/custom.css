@@ -1,0 +1,198 @@
+/* Main theme colors */
+:root {
+    --color-primary: #FFD21E;
+    --color-secondary: #84919A;
+    --color-background: #FFFFFF;
+    --color-text: #1A1C1F;
+    --color-accent: #2563EB;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'SF Mono', 'Roboto Mono', monospace;
+    --spacing-unit: 16px;
+    --radius: 8px;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Base styling */
+html, body, [class*="css"] {
+    font-family: var(--font-sans) !important;
+    color: var(--color-text);
+}
+
+/* Header styling */
+.header {
+    padding: var(--spacing-unit) 0;
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+    color: var(--color-text);
+    font-weight: 800;
+    margin-bottom: calc(var(--spacing-unit) / 2);
+}
+
+.header p {
+    color: var(--color-secondary);
+    font-size: 1.1rem;
+}
+
+/* Sidebar styling */
+.sidebar-header {
+    margin-bottom: var(--spacing-unit);
+}
+
+.sidebar-header h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.sidebar-footer {
+    margin-top: calc(var(--spacing-unit) * 2);
+    padding-top: var(--spacing-unit);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 0.8rem;
+    color: var(--color-secondary);
+}
+
+/* Card styling */
+.stCard {
+    border-radius: var(--radius) !important;
+    box-shadow: var(--shadow) !important;
+    border: none !important;
+}
+
+/* Dataset container styling */
+.upload-container {
+    background-color: #f8f9fa;
+    padding: var(--spacing-unit);
+    border-radius: var(--radius);
+    margin-bottom: var(--spacing-unit);
+}
+
+.dataset-preview {
+    margin: var(--spacing-unit) 0;
+    background-color: #f8f9fa;
+    padding: var(--spacing-unit);
+    border-radius: var(--radius);
+}
+
+/* Metric styling */
+.css-1ht1j8u {
+    background-color: var(--color-background) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: var(--shadow) !important;
+    padding: var(--spacing-unit) !important;
+}
+
+/* Code styling */
+code {
+    font-family: var(--font-mono) !important;
+    background-color: #f1f1f1;
+    border-radius: calc(var(--radius) / 2);
+    padding: 2px 4px;
+}
+
+pre {
+    background-color: #f1f1f1 !important;
+    border-radius: var(--radius);
+    padding: var(--spacing-unit);
+}
+
+/* Button styling */
+.stButton>button {
+    background-color: var(--color-accent);
+    color: white;
+    font-weight: 600;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+}
+
+.stButton>button:hover {
+    background-color: #1a56db;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+/* Tables styling */
+.dataframe {
+    font-family: var(--font-sans) !important;
+}
+
+.dataframe th {
+    background-color: #f1f3f5;
+    font-weight: 600;
+}
+
+/* Widget labels */
+.css-1cpxqw2 {
+    color: var(--color-text) !important;
+    font-weight: 600 !important;
+}
+
+/* Expander header styling */
+.streamlit-expanderHeader {
+    font-weight: 600 !important;
+    color: var(--color-text) !important;
+}
+
+/* Status messages */
+.stSuccess, .stInfo {
+    background-color: #dff5e7 !important;
+    color: #0e5937 !important;
+    padding: calc(var(--spacing-unit) / 2) var(--spacing-unit) !important;
+    border-radius: var(--radius) !important;
+}
+
+.stWarning {
+    background-color: #fff6e0 !important;
+    color: #b78105 !important;
+    padding: calc(var(--spacing-unit) / 2) var(--spacing-unit) !important;
+    border-radius: var(--radius) !important;
+}
+
+.stError {
+    background-color: #fceeee !important;
+    color: #bd1010 !important;
+    padding: calc(var(--spacing-unit) / 2) var(--spacing-unit) !important;
+    border-radius: var(--radius) !important;
+}
+
+/* File uploader styling */
+.stFileUploader {
+    background-color: #f8f9fa;
+    padding: var(--spacing-unit);
+    border-radius: var(--radius);
+    border: 2px dashed #d1d5db;
+}
+
+/* Tabs styling */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 10px 16px;
+    font-weight: 600;
+}
+
+.stTabs [data-baseweb="tab-highlight"] {
+    background-color: var(--color-primary);
+}
+
+/* Responsive layout */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .header p {
+        font-size: 1rem;
+    }
+    
+    .css-1d391kg {
+        columns: 1 !important;
+    }
+}
