@@ -10,7 +10,7 @@ from components.dataset_preview import render_dataset_preview
 from components.dataset_statistics import render_dataset_statistics
 from components.dataset_validation import render_dataset_validation
 from components.dataset_visualization import render_dataset_visualization
-from components.fine_tuning import render_finetune_ui
+from components.fine_tuning.finetune_ui import render_finetune_ui
 from components.code_quality import render_code_quality_tools
 from utils.huggingface_integration import search_huggingface_datasets, load_huggingface_dataset
 from utils.dataset_utils import get_dataset_info, detect_dataset_format
